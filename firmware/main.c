@@ -32,15 +32,15 @@ ISR(ADC_vect)
 	//disable ADC (to save power)
 	ADCSRA &= ~(1<<ADEN);
 
+	enableADC=0;
+
 	updateLTCstate();
 	
-	enableADC=0;
 }
 
 ISR(TIM0_OVF_vect)
 {
 	enableADC = 1;
-
 }
 
 
@@ -100,7 +100,7 @@ int main (void)
 	//eable timer0 overflow interrupt
 	TIMSK0 |= (1<<TOIE0);
 	
-	// enable sleep
+	// globally enable sleep
 	MCUCR |= (1<<SE);
 	
 	//globally enable interrupts
