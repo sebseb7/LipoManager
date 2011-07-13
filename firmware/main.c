@@ -1,64 +1,71 @@
 #include <inttypes.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-
 #include "main.h"
 
 
 void updateLTCstate(void);
 
 uint8_t volatile currentState = 0; // bit 0: 1==enabled per key , bit 1: 1==battery voltage sufficient
-uint8_t volatile enableADC = 0;
+uint8_t volatile enableADC = 1;
+uint8_t volatile timer_count = 0;
 
-
+// PB1/INT0 connected to switch 1 (off)
+// PB2/PCINT2 connected to switch 2 (on)
 // PB3/ADC3 connected to voltage divider
-// PB2/PCINT2 connected to switch 1
-// PB3/PCINT1 connected to switch 2 
 // PB0 connected to LTC 3558 EN2
 
 
 ISR(ADC_vect)
 {
-	// TODO: do ADC readout 
-	
-	
-	// if > 3.8V
-	currentState |= 2;
-	
-	// if < 3.5V
-	// currentSate &= ~2;
-	
-	
-	//disable ADC (to save power)
-	ADCSRA &= ~(1<<ADEN);
 
-	enableADC=0;
+	uint16_t adc_res = ADC;
 
+	// > ~3.7V
+	if(adc_res > 850)
+	{
+		currentState |= 2;
+	}
+
+	// < ~3.4V
+	if(adc_res < 800)
+	{
+		currentState &= ~2;
+	}
 	updateLTCstate();
+
+
+	//disable ADC again
+	ADCSRA &= ~(1<<ADEN);
+	PRR |= (1<<PRADC);
+	enableADC=0;
 	
 }
 
 ISR(TIM0_OVF_vect)
 {
-	enableADC = 1;
-}
+	timer_count++;
 
+	//enable adc every ~20 seconds
+	if(timer_count > 50)
+	{
+		enableADC = 1;
+		timer_count=0;
+	}
+}
 
 ISR(PCINT0_vect)
 {
-	if( (PINB & (1<<PINB2)) == 0)
-	{
-		currentState |= 1;
-	}
-
-	if( (PINB & (1<<PINB3)) == 0 )
-	{
-		currentState &= ~1;
-	}
-
+	currentState |= 1;
 	updateLTCstate();
-
 }
+
+ISR(INT0_vect)
+{
+	currentState &= ~1;
+	updateLTCstate();
+}
+
 
 void updateLTCstate(void)
 {
@@ -79,13 +86,17 @@ void updateLTCstate(void)
 int main (void)
 {
 
-	//set sw1 and sw2 as input and enable pull-ups 
-	DDRB &= ~((1<<PINB2)|((1<<PINB2)));
-	PORTB |= (1<<PORTB2)|(1<<PORTB3);
+	//enable sw1 and sw2 pull-ups 
+	PORTB |= (1<<PORTB2)|(1<<PORTB1);
 
-	//enable interrupt for switch1 and switch2
-	PCMSK |= (1<<PCINT2)|(1<<PCINT1);
+	//enable interrupt for switch1
+	PCMSK |= (1<<PCINT2);
 	GIMSK |= (1<<PCIE);	
+
+
+	//enable interrupt for switch2
+	MCUCR |= (1<<ISC00);
+	GIMSK |= (1<<INT0);	
 	
 	//use interal voltage reference and use ADC3
 	ADMUX |= (1<<REFS0)|(1<<MUX1)|(1<<MUX0);
@@ -97,7 +108,7 @@ int main (void)
 
 	//enable timer0 (prescaler 1024)
 	TCCR0B |= (1<<CS02)|(1<<CS00); // (clock is 600k, so 2,29 TIM0_OVF interrupts per second
-	//eable timer0 overflow interrupt
+	//enable timer0 overflow interrupt
 	TIMSK0 |= (1<<TOIE0);
 	
 	// globally enable sleep
@@ -105,6 +116,8 @@ int main (void)
 	
 	//globally enable interrupts
 	sei();
+
+	updateLTCstate();
 
 	while(1)
 	{
@@ -114,6 +127,7 @@ int main (void)
 			// set sleep mode to ADC
 			MCUCR |= (1<<SM0);
 			//enable ADC
+			PRR &= ~(1<<PRADC);
 			ADCSRA |= (1<<ADEN);
 		}
 		asm volatile("sleep");

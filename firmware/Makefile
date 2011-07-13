@@ -1,16 +1,8 @@
-## fuses d7 d8 fc
-# 4c normal lock
-# 40 total lock
-
-#curl http://seb.exse.net/GSMTOOL.hex > GSMTOOL.hex && avrdude -b 115200 -p m644p -c avr109  -P /dev/cu.usbserial-MKTOOL -U flash:w:GSMTOOL.hex
-
 MCU = attiny13a
+MCU_AVRDUDE = attiny13
 
-#MCU = atmega644
 F_CPU = 600000
 FUSE_SETTINGS = -U lfuse:w:0x69:m
-
-
 
 
 # Output format. (can be srec, ihex, binary)
@@ -130,7 +122,7 @@ AVRDUDE_WRITE_FUSE = $(FUSE_SETTINGS)
 AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
 
 #avrdude -c avrispv2 -P usb -p m32 -U flash:w:blink.hex
-AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
+AVRDUDE_FLAGS = -p $(MCU_AVRDUDE) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
 #AVRDUDE_FLAGS = -p $(MCU) -c $(AVRDUDE_PROGRAMMER)
 
 # Uncomment the following if you want avrdude's erase cycle counter.
