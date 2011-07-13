@@ -1,6 +1,8 @@
 #include <inttypes.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/eeprom.h>
+
 #include "main.h"
 
 
@@ -9,6 +11,12 @@ void updateLTCstate(void);
 uint8_t volatile currentState = 0; // bit 0: 1==enabled per key , bit 1: 1==battery voltage sufficient
 uint8_t volatile enableADC = 1;
 uint8_t volatile timer_count = 0;
+
+// upper and lower undervoltage locker values are stored in eeprom
+uint16_t uvlo_upper_ee EEMEM = 850;
+uint16_t uvlo_lower_ee EEMEM = 800;
+uint16_t uvlo_upper = 0;
+uint16_t uvlo_lower = 0;
 
 // PB1/INT0 connected to switch 1 (off)
 // PB2/PCINT2 connected to switch 2 (on)
@@ -21,14 +29,12 @@ ISR(ADC_vect)
 
 	uint16_t adc_res = ADC;
 
-	// > ~3.7V
-	if(adc_res > 850)
+	if(adc_res > uvlo_upper)
 	{
 		currentState |= 2;
 	}
 
-	// < ~3.4V
-	if(adc_res < 800)
+	if(adc_res < uvlo_lower)
 	{
 		currentState &= ~2;
 	}
@@ -85,6 +91,11 @@ void updateLTCstate(void)
 
 int main (void)
 {
+	uvlo_upper = eeprom_read_word(&uvlo_upper_ee);
+	uvlo_lower = eeprom_read_word(&uvlo_lower_ee);
+
+	if(uvlo_upper == 0xFFFF) uvlo_upper = 850;
+	if(uvlo_lower == 0xFFFF) uvlo_lower = 800;
 
 	//enable sw1 and sw2 pull-ups 
 	PORTB |= (1<<PORTB2)|(1<<PORTB1);
