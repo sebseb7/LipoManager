@@ -29,16 +29,30 @@ ISR(ADC_vect)
 
 	uint16_t adc_res = ADC;
 
-	if(adc_res > uvlo_upper)
+	if(enableADC == 2)
 	{
-		currentState |= 2;
+		// set uvlo values
+		uvlo_upper = adc_res + 25;
+		uvlo_lower = adc_res - 25;
+		
+		eeprom_write_word(&uvlo_upper_ee,  uvlo_upper);
+		eeprom_write_word(&uvlo_lower_ee,  uvlo_lower);
 	}
+	else
+	{
 
-	if(adc_res < uvlo_lower)
-	{
-		currentState &= ~2;
+		if(adc_res > uvlo_upper)
+		{
+			currentState |= 2;
+		}
+
+		if(adc_res < uvlo_lower)
+		{
+			currentState &= ~2;
+		}
+		updateLTCstate();
+
 	}
-	updateLTCstate();
 
 
 	//disable ADC again
@@ -99,6 +113,15 @@ int main (void)
 
 	//enable sw1 and sw2 pull-ups 
 	PORTB |= (1<<PORTB2)|(1<<PORTB1);
+	
+	
+	//check for sw2 for setting uvlo values
+	if( ((PINB >> PINB2) & 1)==0 )
+	{
+		// 2 == store uvlo
+		enableADC = 2;
+	}
+	
 
 	//enable interrupt for switch1
 	PCMSK |= (1<<PCINT2);
@@ -133,7 +156,7 @@ int main (void)
 	while(1)
 	{
 		MCUCR &= ~((1<<SM0)|(1<<SM1));
-		if(enableADC == 1)
+		if(enableADC > 0)
 		{
 			// set sleep mode to ADC
 			MCUCR |= (1<<SM0);
