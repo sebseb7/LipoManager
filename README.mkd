@@ -2,6 +2,9 @@
 
 
 
+![pcb](/sebseb7/LipoManager/raw/master/pcb.jpg)
+
+
 
 ![bottom](/sebseb7/LipoManager/raw/master/bot.png)
 
