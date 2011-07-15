@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
+#include <util/delay.h>
 
 #include "main.h"
 
@@ -119,8 +120,18 @@ int main (void)
 	//check for sw2 (on) for setting uvlo values
 	if( ((PINB >> PINB2) & 1)==0 )
 	{
-		// 2 == store uvlo
-		enableADC = 2;
+		_delay_ms(500);
+		
+		if( ((PINB >> PINB2) & 1)==0 )
+		{
+			_delay_ms(500);
+			
+			if( ((PINB >> PINB2) & 1)==0 )
+			{
+				// 2 == store uvlo
+				enableADC = 2;
+			}
+		}
 	}
 	
 
