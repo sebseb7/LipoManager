@@ -1,8 +1,10 @@
 MCU = attiny13a
 MCU_AVRDUDE = attiny13
 
-F_CPU = 600000
-FUSE_SETTINGS = -U lfuse:w:0x69:m
+#F_CPU = 600000
+#FUSE_SETTINGS = -U lfuse:w:0x69:m # 600khz
+F_CPU = 16000
+FUSE_SETTINGS = -U lfuse:w:0x6B:m # 16khz
 
 
 # Output format. (can be srec, ihex, binary)

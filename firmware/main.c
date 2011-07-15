@@ -10,7 +10,6 @@ void updateLTCstate(void);
 
 uint8_t volatile currentState = 0; // bit 0: 1==enabled per key , bit 1: 1==battery voltage sufficient
 uint8_t volatile enableADC = 1;
-uint8_t volatile timer_count = 0;
 
 // upper and lower undervoltage locker values are stored in eeprom
 uint16_t uvlo_upper_ee EEMEM = 850;
@@ -48,7 +47,8 @@ ISR(ADC_vect)
 
 		if(adc_res < uvlo_lower)
 		{
-			currentState &= ~2;
+			// set set key state also to 0
+			currentState = 0;
 		}
 		updateLTCstate();
 
@@ -62,24 +62,23 @@ ISR(ADC_vect)
 	
 }
 
+//every 16 seconds
 ISR(TIM0_OVF_vect)
 {
-	timer_count++;
-
-	//enable adc every ~20 seconds
-	if(timer_count > 50)
-	{
-		enableADC = 1;
-		timer_count=0;
-	}
+	enableADC = 1;
 }
 
+
+//on
 ISR(PCINT0_vect)
 {
+	// after each wake up from deep sleep, we also do ADC
+	enableADC = 1;
 	currentState |= 1;
 	updateLTCstate();
 }
 
+//off
 ISR(INT0_vect)
 {
 	currentState &= ~1;
@@ -105,6 +104,7 @@ void updateLTCstate(void)
 
 int main (void)
 {
+
 	uvlo_upper = eeprom_read_word(&uvlo_upper_ee);
 	uvlo_lower = eeprom_read_word(&uvlo_lower_ee);
 
@@ -113,9 +113,10 @@ int main (void)
 
 	//enable sw1 and sw2 pull-ups 
 	PORTB |= (1<<PORTB2)|(1<<PORTB1);
+
 	
 	
-	//check for sw2 for setting uvlo values
+	//check for sw2 (on) for setting uvlo values
 	if( ((PINB >> PINB2) & 1)==0 )
 	{
 		// 2 == store uvlo
@@ -123,25 +124,26 @@ int main (void)
 	}
 	
 
-	//enable interrupt for switch1
-	PCMSK |= (1<<PCINT2);
-	GIMSK |= (1<<PCIE);	
-
-
-	//enable interrupt for switch2
+	//enable interrupt for switch1 (off)
 	MCUCR |= (1<<ISC00);
 	GIMSK |= (1<<INT0);	
+
+	//enable interrupt for switch2 (on)
+	PCMSK |= (1<<PCINT2);
+	GIMSK |= (1<<PCIE);	
 	
 	//use interal voltage reference and use ADC3
 	ADMUX |= (1<<REFS0)|(1<<MUX1)|(1<<MUX0);
 	//enable ADC interrupt
 	ADCSRA |= (1<<ADIE);
-	//disable digital input buffer for the ADC3 Pin
+	//disable digital input buffer for the ADC3 Pin to reduce noise for ADC
 	DIDR0 |= (1<<ADC3D);
+	//disable digital input buffer for the ADC2/PB4 the pin is not connected and consumes additional 260µA otherwise (alternativly one could enable the internal pull-up)
+	DIDR0 |= (1<<ADC2D); 
 
 
 	//enable timer0 (prescaler 1024)
-	TCCR0B |= (1<<CS02)|(1<<CS00); // (clock is 600k, so 2,29 TIM0_OVF interrupts per second
+	TCCR0B |= (1<<CS01)|(1<<CS00); // (clock is 16k, 7,8 TIM0_OVF interrupts per second, no problem to be that fast, because we do this only when actived per key)
 	//enable timer0 overflow interrupt
 	TIMSK0 |= (1<<TOIE0);
 	
@@ -153,6 +155,7 @@ int main (void)
 
 	updateLTCstate();
 
+
 	while(1)
 	{
 		MCUCR &= ~((1<<SM0)|(1<<SM1));
@@ -163,6 +166,16 @@ int main (void)
 			//enable ADC
 			PRR &= ~(1<<PRADC);
 			ADCSRA |= (1<<ADEN);
+		}
+		else
+		{
+			// go into powerdown mode if not fully activated (consumtion :  25-40µA )
+			if(currentState != 3)
+			{
+				MCUCR |= (1<<SM1);
+			}
+			//else: if fully activated, we let the timer run and w also need idle mode to detect pinchange on int0 (does not work)
+			// 		(consumtion 100-123µA, but in this mode the LTC is also enabled)
 		}
 		asm volatile("sleep");
 	}

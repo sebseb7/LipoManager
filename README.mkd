@@ -1,3 +1,8 @@
+This is a small PCB with a 1S LIPO changer and DC-DC converter to 5V.
+It also has a configurable UVLO
+
+it consumes only 25-40 µA (I think is is possible to save additional 15-25µA)
+
 
 
 
