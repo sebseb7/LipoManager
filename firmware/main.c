@@ -138,7 +138,7 @@ int main (void)
 	ADCSRA |= (1<<ADIE);
 	//disable digital input buffer for the ADC3 Pin to reduce noise for ADC
 	DIDR0 |= (1<<ADC3D);
-	//disable digital input buffer for the ADC2/PB4 the pin is not connected and consumes additional 260µA otherwise (alternativly one could enable the internal pull-up)
+	//disable digital input buffer for the ADC2/PB4 the pin is not connected and consumes additional 260uA otherwise (alternativly one could enable the internal pull-up)
 	DIDR0 |= (1<<ADC2D); 
 
 
@@ -169,13 +169,13 @@ int main (void)
 		}
 		else
 		{
-			// go into powerdown mode if not fully activated (consumtion :  25-40µA )
+			// go into powerdown mode if not fully activated (consumtion :  25-40uA )
 			if(currentState != 3)
 			{
 				MCUCR |= (1<<SM1);
 			}
 			//else: if fully activated, we let the timer run and w also need idle mode to detect pinchange on int0 (does not work)
-			// 		(consumtion 100-123µA, but in this mode the LTC is also enabled)
+			// 		(consumtion 100-123uA, but in this mode the LTC is also enabled)
 		}
 		asm volatile("sleep");
 	}
