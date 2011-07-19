@@ -1,0 +1,9 @@
+lipo.eep
+lipo.elf
+lipo.hex
+lipo.lss
+lipo.map
+lipo.sym
+main.d
+main.lst
+main.o
