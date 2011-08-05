@@ -12,7 +12,10 @@ it consumes only 25-40 uA (I think is is possible to save additional 15-25uA)
 
 
 
-![bottom](/sebseb7/LipoManager/raw/master/bot.png)
+![top](/sebseb7/LipoManager/raw/master/top.jpg)
 
+![names](/sebseb7/LipoManager/raw/master/names.jpg)
 
-![top](/sebseb7/LipoManager/raw/master/top.png)
+![values](/sebseb7/LipoManager/raw/master/values.jpg)
+
+![schematics](/sebseb7/LipoManager/raw/master/schematics.jpg)
