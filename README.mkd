@@ -1,8 +1,7 @@
 This is a small PCB with a 1S LIPO charger and DC-DC converter to 5V or 3.3V.
 
-It also has a configurable UVLO (defaults to 3.5V)
-
-it consumes only 25-40 uA (I think is is possible to save additional 15-25uA)
+- undervoltage monitoring
+- it consumes only 5 uA when switched off or at undervoltage detection
 
 
 
