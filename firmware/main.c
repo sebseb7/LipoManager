@@ -10,8 +10,20 @@ void updateLTCstate(void);
 uint8_t volatile currentState = 0; // bit 0: 1==enabled per key , bit 1: 1==battery voltage sufficient
 uint8_t volatile enableADC = 1;
 
+
+#define Vuvlo 350
+#define R1 680
+#define R2 220
+#define VADC (Vuvlo/(R1+R2))*R2 // 85.5
+#define ADCuvlo (VADC*1024)/110
+
+//#define UVLO_UPPER ADCuvlo+25
+//#define UVLO_LOWER ADCuvlo-25
+
 #define UVLO_UPPER 850
 #define UVLO_LOWER 800
+
+#warning UVLO_UPPER
 
 
 //in switchless mode uvlo detection is allways running
