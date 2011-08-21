@@ -14,16 +14,12 @@ uint8_t volatile enableADC = 1;
 #define Vuvlo 350
 #define R1 680
 #define R2 220
-#define VADC (Vuvlo/(R1+R2))*R2 // 85.5
+// this cast is very important, otherwise gcc optimizes this to 0
+#define VADC Vuvlo*(uint32_t)R2/(R1+R2) // 85.5
 #define ADCuvlo (VADC*1024)/110
 
-//#define UVLO_UPPER ADCuvlo+25
-//#define UVLO_LOWER ADCuvlo-25
-
-#define UVLO_UPPER 850
-#define UVLO_LOWER 800
-
-#warning UVLO_UPPER
+#define UVLO_UPPER ADCuvlo+32 // 824 == 0,885V ADC Pin == 3,62V Bat
+#define UVLO_LOWER ADCuvlo-32 // 759 == 0,815V ADC Pin == 3,33V Bat
 
 
 //in switchless mode uvlo detection is allways running
@@ -44,10 +40,10 @@ ISR(ADC_vect)
 
 	if(ADC < UVLO_LOWER)
 	{
-		// set set key state also to 0
 #ifdef SWITCHLESS
 		currentState &= ~2;
 #else
+		// set key state also to 0
 		currentState = 0;
 #endif
 	}
