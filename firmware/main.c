@@ -23,8 +23,8 @@ uint8_t volatile enableADC = 1;
 
 
 //in switchless mode uvlo detection is allways running
-//#define SWITCHLESS
-//#define SWITCHLESS_FULLOFF
+#define SWITCHLESS
+#define SWITCHLESS_FULLOFF
 
 //todo: implement this mode
 //#define ONE_TOGGLE_SWITCH
@@ -156,6 +156,9 @@ int main (void)
 	updateLTCstate();
 
 
+
+	// current consuption when fully activated : 4,5mA (should be slightly less) 
+
 	while(1)
 	{
 		MCUCR &= ~((1<<SM0)|(1<<SM1));
@@ -168,27 +171,29 @@ int main (void)
 			PRR &= ~(1<<PRADC);
 			ADCSRA |= (1<<ADEN);
 		}
-#ifndef SWITCHLESS
 		else
 		{
+#ifndef SWITCHLESS
 			// go into powerdown mode if not fully activated (consumtion :  ~5uA )
 			if(currentState != 3)
 			{
 				MCUCR |= (1<<SM1);
 			}
-		}
 #else
-		// in switchless mode we go into idle sleep (consumtion : ~75uA )
+			// in switchless mode we go into idle sleep (consumtion : ~75uA )
 
 #ifdef SWITCHLESS_FULLOFF
-		// in switchless_fulloff mode we go into powerdown sleep (consumtion : ~5uA )
-		// reset is neccessary to reactivate it
-		if((currentState | 2) == 0)
-		{
+			// in switchless_fulloff mode we go into powerdown sleep (consumtion : ~5uA )
+			// reset is neccessary to reactivate it
+			if((currentState & 2) == 0)
+			{
 				MCUCR |= (1<<SM1);
+			}
+#endif
+#endif
+
 		}
-#endif
-#endif
+
 		asm volatile("sleep");
 	}
 }
