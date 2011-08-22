@@ -7,11 +7,11 @@
 
 void updateLTCstate(void);
 
-uint8_t volatile currentState = 0; // bit 0: 1==enabled per key , bit 1: 1==battery voltage sufficient
+uint8_t volatile currentState = 3; // bit 0: 1==enabled per key , bit 1: 1==battery voltage sufficient
 uint8_t volatile enableADC = 1;
 
 
-#define Vuvlo 350
+#define Vuvlo 350 // +/-  ~ 0,15V
 #define R1 680
 #define R2 220
 // this cast is very important, otherwise gcc optimizes this to 0
@@ -24,6 +24,10 @@ uint8_t volatile enableADC = 1;
 
 //in switchless mode uvlo detection is allways running
 //#define SWITCHLESS
+//#define SWITCHLESS_FULLOFF
+
+//todo: implement this mode
+//#define ONE_TOGGLE_SWITCH
 
 // PB1/INT0 connected to switch 1 (off)
 // PB2/PCINT2 connected to switch 2 (on)
@@ -68,6 +72,7 @@ ISR(PCINT0_vect)
 {
 	// after each wake up from deep sleep, we also do ADC
 	currentState |= 1;
+	enableADC=1;
 	updateLTCstate();
 }
 
@@ -133,11 +138,11 @@ int main (void)
 
 
 #ifdef SWITCHLESS
-	//enable timer0 (prescaler 64)
-	TCCR0B |= (1<<CS01)|(1<<CS00); // (clock is 16k, == ~1 TIM0_OVF interrupts per second)
-#else
 	//enable timer0 (prescaler 8)
 	TCCR0B |= (1<<CS01); // (clock is 500, == ~.24 TIM0_OVF interrupts per second)
+#else
+	//enable timer0 (prescaler 64)
+	TCCR0B |= (1<<CS01)|(1<<CS00); // (clock is 16k, == ~1 TIM0_OVF interrupts per second)
 #endif
 	//enable timer0 overflow interrupt
 	TIMSK0 |= (1<<TOIE0);
@@ -174,6 +179,15 @@ int main (void)
 		}
 #else
 		// in switchless mode we go into idle sleep (consumtion : ~75uA )
+
+#ifdef SWITCHLESS_FULLOFF
+		// in switchless_fulloff mode we go into powerdown sleep (consumtion : ~5uA )
+		// reset is neccessary to reactivate it
+		if((currentState | 2) == 0)
+		{
+				MCUCR |= (1<<SM1);
+		}
+#endif
 #endif
 		asm volatile("sleep");
 	}
