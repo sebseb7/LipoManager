@@ -66,7 +66,7 @@ ISR(TIM0_OVF_vect)
 }
 
 
-#ifndef SWITCHLESS
+#if defined(SWITCHLESS_FULLOFF) || !defined(SWITCHLESS)
 //on
 ISR(PCINT0_vect)
 {
@@ -75,7 +75,9 @@ ISR(PCINT0_vect)
 	enableADC=1;
 	updateLTCstate();
 }
+#endif
 
+#ifndef SWITCHLESS
 //off
 ISR(INT0_vect)
 {
@@ -113,14 +115,19 @@ int main (void)
 	CLKPR = (1<<CLKPS3);
 
 	// disable input buffers for switch1 and switch2 
-	DIDR0 |= (1<<AIN1D)|(1>>ADC1D);
+	DIDR0 |= (1<<AIN1D);
+#ifndef SWITCHLESS_FULLOFF
+	DIDR0 |= (1>>ADC1D);
+#endif
 	currentState |= 1;
-#else
 
+#else
 	//enable interrupt for switch1 (off)
 	MCUCR |= (1<<ISC00);
 	GIMSK |= (1<<INT0);	
+#endif
 
+#if defined(SWITCHLESS_FULLOFF) || !defined(SWITCHLESS)
 	//enable interrupt for switch2 (on)
 	PCMSK |= (1<<PCINT2);
 	GIMSK |= (1<<PCIE);	
