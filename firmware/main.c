@@ -9,6 +9,8 @@ void updateLTCstate(void);
 
 uint8_t volatile currentState = 3; // bit 0: 1==enabled per key , bit 1: 1==battery voltage sufficient
 uint8_t volatile enableADC = 1;
+uint8_t volatile downCount = 0;
+uint8_t volatile restartDelay = 0;
 
 
 #define Vuvlo 350 // +/-  ~ 0,15V
@@ -23,8 +25,8 @@ uint8_t volatile enableADC = 1;
 
 
 //in switchless mode uvlo detection is allways running
-#define SWITCHLESS
-#define SWITCHLESS_FULLOFF
+//#define SWITCHLESS
+//#define SWITCHLESS_FULLOFF
 
 //todo: implement this mode
 //#define ONE_TOGGLE_SWITCH
@@ -63,6 +65,26 @@ ISR(ADC_vect)
 ISR(TIM0_OVF_vect)
 {
 	enableADC = 1;
+#if defined(SWITCHLESS_FULLOFF) || !defined(SWITCHLESS)
+	if((PINB & (1<<PINB2))==0)
+	{
+		downCount++;
+		if(downCount == 15)
+		{
+			downCount=0;
+			currentState &= ~1;
+			updateLTCstate();
+		}	
+	}
+	else
+	{
+		downCount=0;
+	}
+#endif	
+	if(restartDelay > 0)
+	{
+		restartDelay--;
+	}
 }
 
 
@@ -71,9 +93,12 @@ ISR(TIM0_OVF_vect)
 ISR(PCINT0_vect)
 {
 	// after each wake up from deep sleep, we also do ADC
-	currentState |= 1;
-	enableADC=1;
-	updateLTCstate();
+	if(restartDelay == 0)
+	{
+		currentState |= 1;
+		enableADC=1;
+		updateLTCstate();
+	}
 }
 #endif
 
@@ -98,7 +123,11 @@ void updateLTCstate(void)
 	else
 	{
 		// disable LTC EN2
-		PORTB &= ~(1<<PORTB0);
+		if(PORTB & (1<<PORTB0))
+		{
+			restartDelay = 3;
+			PORTB &= ~(1<<PORTB0);
+		}
 	}
 }
 
@@ -184,7 +213,10 @@ int main (void)
 			// go into powerdown mode if not fully activated (consumtion :  ~5uA )
 			if(currentState != 3)
 			{
-				MCUCR |= (1<<SM1);
+				if(restartDelay == 0)
+				{
+					MCUCR |= (1<<SM1);
+				}
 			}
 #else
 			// in switchless mode we go into idle sleep (consumtion : ~75uA )
@@ -194,7 +226,10 @@ int main (void)
 			// reset is neccessary to reactivate it
 			if((currentState & 2) == 0)
 			{
-				MCUCR |= (1<<SM1);
+				if(restartDelay == 0)
+				{
+					MCUCR |= (1<<SM1);
+				}
 			}
 #endif
 #endif
