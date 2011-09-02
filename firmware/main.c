@@ -171,6 +171,8 @@ int main (void)
 	//disable digital input buffer for the ADC2/PB4 the pin is not connected and consumes additional 260uA otherwise (alternativly one could enable the internal pull-up)
 	PORTB |= (1<<PORTB4);
 	DIDR0 |= (1<<ADC2D); 
+	//disable the analog comparator
+	ACSR |= (1<<ACD);
 
 
 #ifdef SWITCHLESS
