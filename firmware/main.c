@@ -24,12 +24,18 @@ uint8_t volatile restartDelay = 0;
 #define UVLO_LOWER ADCuvlo-32 // 759 == 0,815V ADC Pin == 3,33V Bat
 
 
-//in switchless mode uvlo detection is allways running
-//#define SWITCHLESS
-//#define SWITCHLESS_FULLOFF
+//choose one: 
 
-//todo: implement this mode
-//#define ONE_TOGGLE_SWITCH
+//#define MODE_TWO_BUTTONS
+//#define MODE_SWITCHLESS
+//#define MODE_ON_BUTTON_ONLY
+#define MODE_TOGGLE
+
+
+
+//in MODE_ON_BUTTON_ONLY, MODE_NORMAL and MODE_TOGGLE mode uvlo detection is stopped when uvlo is detected (can be woken via switch_on)
+//in switchless mode uvlo detection is allways running
+
 
 // PB1/INT0 connected to switch 1 (off)
 // PB2/PCINT2 connected to switch 2 (on)
@@ -46,7 +52,7 @@ ISR(ADC_vect)
 
 	if(ADC < UVLO_LOWER)
 	{
-#ifdef SWITCHLESS
+#ifdef MODE_SWITCHLESS
 		currentState &= ~2;
 #else
 		// set key state also to 0
@@ -61,12 +67,12 @@ ISR(ADC_vect)
 	
 }
 
-//every second (every 4 seconds in switchless)
+//every second (every 4 seconds in mode_switchless)
 ISR(TIM0_OVF_vect)
 {
 	enableADC = 1;
-#if defined(SWITCHLESS_FULLOFF) || !defined(SWITCHLESS)
-	if((PINB & (1<<PINB2))==0)
+#if defined(MODE_ON_BUTTON_ONLY) || defined(MODE_NORMAL)
+/*	if((PINB & (1<<PINB2))==0)
 	{
 		downCount++;
 		if(downCount == 15)
@@ -79,7 +85,7 @@ ISR(TIM0_OVF_vect)
 	else
 	{
 		downCount=0;
-	}
+	}*/
 #endif	
 	if(restartDelay > 0)
 	{
@@ -88,10 +94,23 @@ ISR(TIM0_OVF_vect)
 }
 
 
-#if defined(SWITCHLESS_FULLOFF) || !defined(SWITCHLESS)
+#if defined(MODE_ON_BUTTON_ONLY) || defined(MODE_NORMAL) || defined(MODE_TOGGLE)
 //on
 ISR(PCINT0_vect)
 {
+
+#if defined(MODE_TOGGLE)
+	if((PINB & (1<<PINB2))==0)
+	{
+		currentState ^= 1;  
+		if(currentState & 1)
+		{
+			enableADC=1;
+		} 
+		updateLTCstate();
+	}
+		
+#else
 	// after each wake up from deep sleep, we also do ADC
 	if(restartDelay == 0)
 	{
@@ -99,10 +118,12 @@ ISR(PCINT0_vect)
 		enableADC=1;
 		updateLTCstate();
 	}
+#endif
+
 }
 #endif
 
-#ifndef SWITCHLESS
+#if defined(MODE_NORMAL)
 //off
 ISR(INT0_vect)
 {
@@ -138,29 +159,30 @@ int main (void)
 	//enable sw1 and sw2 pull-ups 
 	PORTB |= (1<<PORTB2)|(1<<PORTB1);
 
-#ifdef SWITCHLESS
-	// set clock to 500Hz :-)
-	CLKPR = (1<<CLKPCE);
-	CLKPR = (1<<CLKPS3);
+// set clock to 500Hz :-) (we should do this for switchless maybe)
+//	CLKPR = (1<<CLKPCE);
+//	CLKPR = (1<<CLKPS3);
 
-	// disable input buffers for switch1 and switch2 
-	DIDR0 |= (1<<AIN1D);
-#ifndef SWITCHLESS_FULLOFF
+
+#if defined(MODE_SWITCHLESS)
+	// disable input buffers for switch2
 	DIDR0 |= (1>>ADC1D);
-#endif
 	currentState |= 1;
+#else
+	//enable interrupt for switch2 (on)
+	PCMSK |= (1<<PCINT2);
+	GIMSK |= (1<<PCIE);	
+#endif
 
+#if defined(MODE_ON_BUTTON_ONLY) || defined(MODE_SWITCHLESS) || defined(MODE_TOOGLE)
+	// and switch1
+	DIDR0 |= (1<<AIN1D);
 #else
 	//enable interrupt for switch1 (off)
 	MCUCR |= (1<<ISC00);
 	GIMSK |= (1<<INT0);	
 #endif
 
-#if defined(SWITCHLESS_FULLOFF) || !defined(SWITCHLESS)
-	//enable interrupt for switch2 (on)
-	PCMSK |= (1<<PCINT2);
-	GIMSK |= (1<<PCIE);	
-#endif
 
 	//use interal voltage reference and use ADC3
 	ADMUX |= (1<<REFS0)|(1<<MUX1)|(1<<MUX0);
@@ -175,13 +197,13 @@ int main (void)
 	ACSR |= (1<<ACD);
 
 
-#ifdef SWITCHLESS
-	//enable timer0 (prescaler 8)
-	TCCR0B |= (1<<CS01); // (clock is 500, == ~.24 TIM0_OVF interrupts per second)
-#else
+//#ifdef MODE_SWITCHLESS
+//	//enable timer0 (prescaler 8)
+//	TCCR0B |= (1<<CS01); // (clock is 500, == ~.24 TIM0_OVF interrupts per second)
+//#else
 	//enable timer0 (prescaler 64)
 	TCCR0B |= (1<<CS01)|(1<<CS00); // (clock is 16k, == ~1 TIM0_OVF interrupts per second)
-#endif
+//#endif
 	//enable timer0 overflow interrupt
 	TIMSK0 |= (1<<TOIE0);
 	
@@ -211,7 +233,7 @@ int main (void)
 		}
 		else
 		{
-#ifndef SWITCHLESS
+#if !defined(MODE_SWITCHLESS)
 			// go into powerdown mode if not fully activated (consumtion :  ~5uA )
 			if(currentState != 3)
 			{
@@ -220,21 +242,9 @@ int main (void)
 					MCUCR |= (1<<SM1);
 				}
 			}
-#else
-			// in switchless mode we go into idle sleep (consumtion : ~75uA )
+#endif
+			// in mode_switchless mode we go into idle sleep (consumtion : ~75uA )
 
-#ifdef SWITCHLESS_FULLOFF
-			// in switchless_fulloff mode we go into powerdown sleep (consumtion : ~5uA )
-			// reset is neccessary to reactivate it
-			if((currentState & 2) == 0)
-			{
-				if(restartDelay == 0)
-				{
-					MCUCR |= (1<<SM1);
-				}
-			}
-#endif
-#endif
 
 		}
 
