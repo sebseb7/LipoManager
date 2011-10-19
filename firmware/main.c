@@ -26,14 +26,14 @@ uint8_t volatile restartDelay = 0;
 
 //choose one: 
 
-//#define MODE_TWO_BUTTONS
+#define MODE_TWO_BUTTONS
 //#define MODE_SWITCHLESS
 //#define MODE_ON_BUTTON_ONLY
-#define MODE_TOGGLE
+//#define MODE_TOGGLE
 
 
 
-//in MODE_ON_BUTTON_ONLY, MODE_NORMAL and MODE_TOGGLE mode uvlo detection is stopped when uvlo is detected (can be woken via switch_on)
+//in MODE_ON_BUTTON_ONLY, MODE_TWO_BUTTONS and MODE_TOGGLE mode uvlo detection is stopped when uvlo is detected (can be woken via switch_on)
 //in switchless mode uvlo detection is allways running
 
 
@@ -71,11 +71,11 @@ ISR(ADC_vect)
 ISR(TIM0_OVF_vect)
 {
 	enableADC = 1;
-#if defined(MODE_ON_BUTTON_ONLY) || defined(MODE_NORMAL)
-/*	if((PINB & (1<<PINB2))==0)
+#if defined(MODE_ON_BUTTON_ONLY) || defined(MODE_TWO_BUTTONS)
+	if((PINB & (1<<PINB2))==0)
 	{
 		downCount++;
-		if(downCount == 15)
+		if(downCount == 10)
 		{
 			downCount=0;
 			currentState &= ~1;
@@ -85,7 +85,7 @@ ISR(TIM0_OVF_vect)
 	else
 	{
 		downCount=0;
-	}*/
+	}
 #endif	
 	if(restartDelay > 0)
 	{
@@ -94,7 +94,7 @@ ISR(TIM0_OVF_vect)
 }
 
 
-#if defined(MODE_ON_BUTTON_ONLY) || defined(MODE_NORMAL) || defined(MODE_TOGGLE)
+#if defined(MODE_ON_BUTTON_ONLY) || defined(MODE_TWO_BUTTONS) || defined(MODE_TOGGLE)
 //on
 ISR(PCINT0_vect)
 {
@@ -123,7 +123,7 @@ ISR(PCINT0_vect)
 }
 #endif
 
-#if defined(MODE_NORMAL)
+#if defined(MODE_TWO_BUTTONS)
 //off
 ISR(INT0_vect)
 {
