@@ -1,8 +1,11 @@
-This is a small PCB with a 1S LIPO charger and DC-DC converter to 5V or 3.3V.
+Usual Application:
 
-- undervoltage monitoring
-- it consumes only 5 uA when switched off or at undervoltage detection
+If you have a 400mA load that needs to be buffered from a 1cell Lipo you should consider this:
 
+- 5V input Voltage (to charge the LiPo and to supply the load)
+- 5V or 3.3V load (400mA max)
+- load buffered by 1cell Lipo
+- Lipo protected by undervoltage detection
 
 
 
