@@ -10,14 +10,14 @@ If you have a 400mA load that needs to be buffered from a 1cell Lipo you should 
 
 
 
-![pcb](/sebseb7/LipoManager/raw/master/pcb.jpg)
+![pcb](https://raw.github.com/sebseb7/LipoManager/master/pcb.jpg)
 
 
 
-![top](/sebseb7/LipoManager/raw/master/top.jpg)
+![top](https://raw.github.com/sebseb7/LipoManager/master/top.jpg)
 
-![names](/sebseb7/LipoManager/raw/master/names.jpg)
+![names](https://raw.github.com/sebseb7/LipoManager/master/names.jpg)
 
-![values](/sebseb7/LipoManager/raw/master/values.jpg)
+![values](https://raw.github.com/sebseb7/LipoManager/master/values.jpg)
 
-![schematics](/sebseb7/LipoManager/raw/master/schematics.jpg)
+![schematics](https://raw.github.com/sebseb7/LipoManager/master/schematics.jpg)
